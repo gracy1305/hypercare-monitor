@@ -450,15 +450,21 @@
 
 <script>
 /* ---------------- Mock Data ---------------- */
-// health scores across a 20-day sampled hypercare window (0-100)
-function genTrend(seed, dip){
-  const days = 20;
+// health scores for each day the client has actually been live (0-100)
+function genTrend(seed, dipFrac, days){
   const arr = [];
-  let v = seed;
+  let dip = null;
+  if(dipFrac){
+    dip = {
+      start: Math.floor(dipFrac.startFrac * days),
+      end: Math.floor(dipFrac.endFrac * days),
+      depth: dipFrac.depth
+    };
+  }
   for(let i=0;i<days;i++){
     let noise = (Math.sin(i*1.3+seed) * 6) + (Math.random()*4-2);
     if(dip && i>=dip.start && i<=dip.end){ noise -= dip.depth; }
-    v = Math.max(30, Math.min(97, seed + noise));
+    const v = Math.max(30, Math.min(97, seed + noise));
     arr.push(Math.round(v));
   }
   return arr;
@@ -470,7 +476,7 @@ const clients = [
     name: "Meridian Point Apartments",
     vertical: "Housing · Affordable (LIHTC)",
     day: 14,
-    trend: genTrend(58, {start:9, end:15, depth:22}),
+    trend: genTrend(58, {startFrac:0.45, endFrac:0.8, depth:22}, 14),
     status: "critical",
     digest: [
       {
@@ -504,7 +510,7 @@ const clients = [
     name: "Harborline Family Practice",
     vertical: "Healthcare · Primary Care",
     day: 8,
-    trend: genTrend(74, {start:3,end:5, depth:10}),
+    trend: genTrend(74, {startFrac:0.35, endFrac:0.65, depth:10}, 8),
     status: "review",
     digest: [
       {
@@ -526,7 +532,7 @@ const clients = [
     name: "Birchwood Commons",
     vertical: "Housing · Market Rate",
     day: 22,
-    trend: genTrend(88, null),
+    trend: genTrend(88, null, 22),
     status: "healthy",
     digest: [
       {
@@ -548,7 +554,7 @@ const clients = [
     name: "Orchid Dermatology Group",
     vertical: "Healthcare · Dermatology",
     day: 5,
-    trend: genTrend(80, null),
+    trend: genTrend(80, null, 5),
     status: "healthy",
     digest: []
   },
@@ -557,7 +563,7 @@ const clients = [
     name: "Cascade Ridge Senior Living",
     vertical: "Housing · Affordable (HUD Section 8)",
     day: 11,
-    trend: genTrend(65, {start:5,end:9,depth:15}),
+    trend: genTrend(65, {startFrac:0.4, endFrac:0.75, depth:15}, 11),
     status: "review",
     digest: [
       {
@@ -609,7 +615,7 @@ function renderQueue(){
         <div class="row1">
           <div>
             <div class="spark">${spark}</div>
-            <div class="spark-hint">Last 12 days</div>
+            <div class="spark-hint">Last ${Math.min(12, c.trend.length)} day${Math.min(12,c.trend.length)===1?'':'s'}</div>
           </div>
           <span class="day-count">Day ${c.day} / 60</span>
         </div>
