@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hypercare Rollout Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12161d;
+    --surface: #1a2029;
+    --surface-2: #212836;
+    --line: #2a3140;
+    --text: #e7eaee;
+    --text-dim: #8b93a3;
+    --text-faint: #5b6373;
+    --amber: #d9a441;
+    --amber-dim: #7a6535;
+    --red: #c1543f;
+    --red-dim: #5e352d;
+    --green: #4e9070;
+    --green-dim: #2e4438;
+    --focus: #6d8fd9;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height:100vh;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .display{font-family:'Space Grotesk', sans-serif;}
+
+  a, button{font-family:inherit;}
+  button{cursor:pointer;}
+  *:focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+
+  .shell{
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
+  }
+
+  /* ---------- Header ---------- */
+  header.topbar{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap: 24px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 26px;
+    flex-wrap: wrap;
+  }
+  .brand{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .brand .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--amber);
+    text-transform: uppercase;
+  }
+  .brand h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 26px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .brand p{
+    margin: 2px 0 0;
+    color: var(--text-dim);
+    font-size: 13.5px;
+    max-width: 480px;
+  }
+  .top-stats{
+    display:flex;
+    gap: 26px;
+  }
+  .stat{
+    text-align:right;
+  }
+  .stat .num{
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 26px;
+    font-weight: 600;
+    line-height:1;
+  }
+  .stat .label{
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .stat.warn .num{ color: var(--amber); }
+  .stat.crit .num{ color: var(--red); }
+
+  /* ---------- Layout ---------- */
+  .layout{
+    display:grid;
+    grid-template-columns: 300px 1fr;
+    gap: 22px;
+    align-items:start;
+  }
+  @media (max-width: 860px){
+    .layout{ grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Client queue ---------- */
+  .queue{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .queue-head{
+    padding: 14px 16px 10px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    border-bottom: 1px solid var(--line);
+  }
+  .client-item{
+    width:100%;
+    text-align:left;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    padding: 14px 16px;
+    display:flex;
+    flex-direction:column;
+    gap: 8px;
+    color: var(--text);
+    transition: background .15s ease;
+  }
+  .client-item:last-child{ border-bottom:none; }
+  .client-item:hover{ background: var(--surface-2); }
+  .client-item.active{
+    background: var(--surface-2);
+    box-shadow: inset 3px 0 0 var(--amber);
+  }
+  .client-item .row1{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:8px;
+  }
+  .client-item .name{ font-weight:600; font-size: 14px; }
+  .client-item .vertical{
+    font-size: 11px; color: var(--text-faint); margin-top:2px;
+  }
+  .pill{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    padding: 3px 7px;
+    border-radius: 100px;
+    white-space:nowrap;
+    height: fit-content;
+  }
+  .pill.healthy{ background: var(--green-dim); color: #a9d8bd; }
+  .pill.review{ background: var(--amber-dim); color: #f0d29a; }
+  .pill.critical{ background: var(--red-dim); color: #f0b3a8; }
+
+  .spark{
+    display:flex; align-items:flex-end; gap: 2px; height: 26px;
+  }
+  .spark i{
+    display:block; width: 4px; border-radius:1px 1px 0 0;
+    background: var(--green);
+  }
+  .spark i.mid{ background: var(--amber); }
+  .spark i.low{ background: var(--red); }
+
+  .day-count{
+    font-size: 11px; color: var(--text-faint); font-family:'IBM Plex Mono', monospace;
+  }
+
+  /* ---------- Main panel ---------- */
+  .panel{
+    display:flex; flex-direction:column; gap:18px;
+  }
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px;
+  }
+  .card-title{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;
+  }
+  .card-title h2{
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 16px;
+    margin:0;
+    font-weight:600;
+  }
+  .card-title .sub{
+    font-size:12px; color: var(--text-faint);
+  }
+
+  /* Timeline / heartbeat */
+  .timeline-wrap{
+    position:relative;
+    height: 92px;
+  }
+  svg.timeline{ width:100%; height:100%; display:block; }
+  .timeline-legend{
+    display:flex; gap:18px; margin-top:10px; font-size:11.5px; color:var(--text-dim);
+  }
+  .legend-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle;}
+
+  /* Digest list */
+  .digest-list{ display:flex; flex-direction:column; gap:10px; }
+  .digest-item{
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .digest-item .top{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+  }
+  .tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .tag.compliance{ background: var(--red-dim); color:#f0b3a8; }
+  .tag.escalation{ background: var(--amber-dim); color:#f0d29a; }
+  .tag.repeat{ background: #2c3550; color:#a9bdf0; }
+  .tag.sentiment{ background: #382c50; color:#cbb3f0; }
+
+  .digest-item h3{
+    font-size: 14px; margin: 4px 0 4px; font-weight:600;
+  }
+  .digest-item p{
+    margin: 0; font-size: 13px; color: var(--text-dim); line-height:1.5;
+  }
+  .digest-item .meta{
+    margin-top:10px; display:flex; gap:14px; font-size:11.5px; color:var(--text-faint); font-family:'IBM Plex Mono', monospace;
+  }
+  .count-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 2px 9px;
+    border-radius: 100px;
+    white-space:nowrap;
+  }
+
+  .transcript{
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-dim);
+    display:none;
+  }
+  .transcript.open{ display:block; }
+  .transcript .who{ color: var(--text); font-weight:600; }
+  .transcript .flagline{ color: var(--red); }
+
+  .toggle-btn{
+    background:none; border:none; color: var(--focus); font-size:12px; margin-top:8px; padding:0;
+  }
+
+  .filters{
+    display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;
+  }
+  .filter-chip{
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .filter-chip.active{
+    background: var(--amber-dim);
+    color: #f0d29a;
+    border-color: var(--amber-dim);
+  }
+
+  .empty{
+    text-align:center;
+    padding: 30px 10px;
+    color: var(--text-faint);
+    font-size: 13px;
+  }
+
+  footer.note{
+    margin-top: 30px;
+    font-size: 11.5px;
+    color: var(--text-faint);
+    text-align:center;
+  }
+
+  /* ---------- Intro / how-to-read guide ---------- */
+  .guide{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--amber);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 22px;
+    display:flex;
+    gap: 18px;
+    align-items:flex-start;
+    flex-wrap: wrap;
+  }
+  .guide .step{
+    flex: 1 1 220px;
+    display:flex;
+    gap: 10px;
+    align-items:flex-start;
+  }
+  .guide .step-num{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size: 13px;
+    color: var(--bg);
+    background: var(--amber);
+    width: 22px; height:22px;
+    border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+    margin-top:1px;
+  }
+  .guide .step p{
+    margin:0;
+    font-size: 12.8px;
+    color: var(--text-dim);
+    line-height:1.45;
+  }
+  .guide .step strong{ color: var(--text); }
+  .guide-dismiss{
+    background:none; border:1px solid var(--line); color:var(--text-faint);
+    font-size:11px; padding: 4px 10px; border-radius:100px; white-space:nowrap;
+  }
+  .guide-dismiss:hover{ color: var(--text); }
+
+  /* score number next to pill */
+  .score-num{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 3px;
+  }
+
+  /* hint text under sparkline */
+  .spark-hint{
+    font-size: 10.5px;
+    color: var(--text-faint);
+    margin-top: 2px;
+  }
+
+  /* tooltip for chart dots */
+  .chart-tooltip{
+    position:absolute;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    padding: 5px 9px;
+    border-radius: 6px;
+    pointer-events:none;
+    transform: translate(-50%, -130%);
+    white-space: nowrap;
+    display:none;
+    z-index: 5;
+  }
+  .timeline-wrap{ position:relative; }
+
+  .section-hint{
+    font-size: 12px;
+    color: var(--text-faint);
+    margin: -6px 0 14px;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="eyebrow">AI Operations · Hypercare Console</span>
+      <h1>Rollout Monitor</h1>
+      <p>Watches new clients' first 60 days on the AI assistant, and tells you which conversations need a human to step in — before a resident or patient has a bad experience.</p>
+    </div>
+    <div class="top-stats">
+      <div class="stat">
+        <div class="num mono" id="stat-active">—</div>
+        <div class="label">Active rollouts</div>
+      </div>
+      <div class="stat warn">
+        <div class="num mono" id="stat-review">—</div>
+        <div class="label">Need review today</div>
+      </div>
+      <div class="stat crit">
+        <div class="num mono" id="stat-critical">—</div>
+        <div class="label">Critical</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="guide" id="guide">
+    <div class="step">
+      <span class="step-num">1</span>
+      <p><strong>Pick a client on the left.</strong> Each one is a property or clinic that just went live on the AI. The colored pill is its overall status right now.</p>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <p><strong>Check the line chart.</strong> It's that client's health score, day by day, since they went live. Dips mean something went wrong that day — hover any dot to see the exact score.</p>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <p><strong>Read today's digest.</strong> These are the specific conversations that caused a dip — grouped by type, with a real example you can open.</p>
+    </div>
+    <button class="guide-dismiss" id="guideDismiss">Got it, hide this</button>
+  </div>
+
+  <div class="layout">
+    <!-- Client Queue -->
+    <div class="queue" id="queue">
+      <div class="queue-head">Clients in hypercare</div>
+      <!-- injected -->
+    </div>
+
+    <!-- Main Panel -->
+    <div class="panel" id="panel">
+      <!-- injected -->
+    </div>
+  </div>
+
+  <footer class="note">Illustrative demo with simulated data — built to reflect how an AI Ops rollout-monitoring workflow could work.</footer>
+</div>
+
+<script>
+/* ---------------- Mock Data ---------------- */
+// health scores across a 20-day sampled hypercare window (0-100)
+function genTrend(seed, dip){
+  const days = 20;
+  const arr = [];
+  let v = seed;
+  for(let i=0;i<days;i++){
+    let noise = (Math.sin(i*1.3+seed) * 6) + (Math.random()*4-2);
+    if(dip && i>=dip.start && i<=dip.end){ noise -= dip.depth; }
+    v = Math.max(30, Math.min(97, seed + noise));
+    arr.push(Math.round(v));
+  }
+  return arr;
+}
+
+const clients = [
+  {
+    id: "meridian",
+    name: "Meridian Point Apartments",
+    vertical: "Housing · Affordable (LIHTC)",
+    day: 14,
+    trend: genTrend(58, {start:9, end:15, depth:22}),
+    status: "critical",
+    digest: [
+      {
+        tag: "compliance",
+        title: "Recertification question answered without handoff",
+        summary: "A resident asked whether a new part-time job would affect their income recertification. The assistant gave a general answer instead of routing to the compliance team — this is exactly the kind of regulated topic that needs a human in the loop.",
+        count: 7,
+        window: "Last 48 hrs",
+        transcript: [
+          {who:"Resident", line:"I just started a part time job, does that mess up my recertification?"},
+          {who:"Assistant", line:"Extra income generally doesn't affect your lease. You're all set!", flag:true},
+          {who:"System", line:"⚠ Flagged: income/recertification topic answered without compliance handoff", flag:true}
+        ]
+      },
+      {
+        tag: "escalation",
+        title: "Maintenance requests re-opened 3+ times",
+        summary: "Several residents have had to re-submit the same maintenance ticket because the assistant closes requests before confirming the issue is resolved.",
+        count: 12,
+        window: "Last 7 days",
+        transcript: [
+          {who:"Resident", line:"My heater is still broken, I already reported this."},
+          {who:"Assistant", line:"Thanks, marking this ticket as resolved!", flag:true},
+          {who:"System", line:"⚠ Same unit, 3rd re-open this week", flag:true}
+        ]
+      }
+    ]
+  },
+  {
+    id: "harbor",
+    name: "Harborline Family Practice",
+    vertical: "Healthcare · Primary Care",
+    day: 8,
+    trend: genTrend(74, {start:3,end:5, depth:10}),
+    status: "review",
+    digest: [
+      {
+        tag: "sentiment",
+        title: "Patients frustrated by intake form repetition",
+        summary: "Feedback signals show patients being asked for insurance details they already provided during scheduling, causing frustration before the visit even starts.",
+        count: 9,
+        window: "Last 5 days",
+        transcript: [
+          {who:"Patient", line:"I already gave you my insurance info when I booked this."},
+          {who:"Assistant", line:"No problem, could you confirm your insurance provider again?", flag:true},
+          {who:"System", line:"⚠ Duplicate data request detected across scheduling → intake handoff", flag:true}
+        ]
+      }
+    ]
+  },
+  {
+    id: "birchwood",
+    name: "Birchwood Commons",
+    vertical: "Housing · Market Rate",
+    day: 22,
+    trend: genTrend(88, null),
+    status: "healthy",
+    digest: [
+      {
+        tag: "repeat",
+        title: "Minor: tour scheduling links occasionally time out",
+        summary: "A small number of prospects reported that the tour booking link expired before they could confirm — low volume, but worth a note to Engineering.",
+        count: 3,
+        window: "Last 7 days",
+        transcript: [
+          {who:"Prospect", line:"The booking link says it expired, can you resend it?"},
+          {who:"Assistant", line:"Of course! Sending a new link now."},
+          {who:"System", line:"Minor — link expiry, non-compliance related"}
+        ]
+      }
+    ]
+  },
+  {
+    id: "orchid",
+    name: "Orchid Dermatology Group",
+    vertical: "Healthcare · Dermatology",
+    day: 5,
+    trend: genTrend(80, null),
+    status: "healthy",
+    digest: []
+  },
+  {
+    id: "cascade",
+    name: "Cascade Ridge Senior Living",
+    vertical: "Housing · Affordable (HUD Section 8)",
+    day: 11,
+    trend: genTrend(65, {start:5,end:9,depth:15}),
+    status: "review",
+    digest: [
+      {
+        tag: "compliance",
+        title: "Section 8 eligibility question handled generically",
+        summary: "A prospective resident asked how a change in household size affects Section 8 eligibility. The assistant gave a generic leasing answer rather than flagging for the compliance-trained staff member.",
+        count: 4,
+        window: "Last 3 days",
+        transcript: [
+          {who:"Prospect", line:"My daughter is moving in with me, does that change my eligibility?"},
+          {who:"Assistant", line:"That shouldn't be an issue, we can proceed with your application.", flag:true},
+          {who:"System", line:"⚠ Household-size / Section 8 eligibility topic — needs compliance review", flag:true}
+        ]
+      }
+    ]
+  }
+];
+
+let activeId = clients[0].id;
+let activeFilter = "all";
+
+/* ---------------- Render ---------------- */
+function statusLabel(s){
+  return s === "critical" ? "Critical" : s === "review" ? "Needs review" : "Healthy";
+}
+
+function renderQueue(){
+  const q = document.getElementById('queue');
+  let html = '<div class="queue-head">Clients in hypercare — click one to open it</div>';
+  clients.forEach(c => {
+    const latest = c.trend[c.trend.length-1];
+    const spark = c.trend.slice(-12).map(v => {
+      const cls = v < 55 ? 'low' : v < 75 ? 'mid' : '';
+      const h = Math.max(4, Math.round(v * 0.24));
+      return `<i class="${cls}" style="height:${h}px"></i>`;
+    }).join('');
+    html += `
+      <button class="client-item ${c.id===activeId?'active':''}" data-id="${c.id}">
+        <div class="row1">
+          <div>
+            <div class="name">${c.name}</div>
+            <div class="vertical">${c.vertical}</div>
+          </div>
+          <div style="text-align:right">
+            <span class="pill ${c.status}">${statusLabel(c.status)}</span>
+            <div class="score-num">${latest}/100 today</div>
+          </div>
+        </div>
+        <div class="row1">
+          <div>
+            <div class="spark">${spark}</div>
+            <div class="spark-hint">Last 12 days</div>
+          </div>
+          <span class="day-count">Day ${c.day} / 60</span>
+        </div>
+      </button>
+    `;
+  });
+  q.innerHTML = html;
+  q.querySelectorAll('.client-item').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ activeId = btn.dataset.id; activeFilter='all'; renderAll(); });
+  });
+}
+
+function buildTimelineSVG(trend){
+  const w = 600, h = 80, pad=6;
+  const max=100, min=30;
+  const stepX = (w-2*pad)/(trend.length-1);
+  const pts = trend.map((v,i)=>{
+    const x = pad + i*stepX;
+    const y = pad + (1-( (v-min)/(max-min) )) * (h-2*pad);
+    return [x,y,v,i];
+  });
+  const linePath = pts.map((p,i)=> (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const areaPath = linePath + ` L ${pts[pts.length-1][0].toFixed(1)},${h-pad} L ${pts[0][0].toFixed(1)},${h-pad} Z`;
+
+  const dots = pts.map(p=>{
+    const color = p[2] < 55 ? 'var(--red)' : p[2] < 75 ? 'var(--amber)' : 'var(--green)';
+    return `<circle class="tdot" data-day="${p[3]+1}" data-score="${p[2]}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="5" fill="${color}" stroke="var(--bg)" stroke-width="1" style="cursor:pointer"/>`;
+  }).join('');
+
+  return `
+    <svg class="timeline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="fadeGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#d9a441" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="#d9a441" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaPath}" fill="url(#fadeGrad)" stroke="none"/>
+      <path d="${linePath}" fill="none" stroke="#8b93a3" stroke-width="1.6"/>
+      ${dots}
+    </svg>
+    <div class="chart-tooltip" id="chartTip"></div>
+  `;
+}
+
+function wireChartTooltip(){
+  const wrap = document.querySelector('.timeline-wrap');
+  const tip = document.getElementById('chartTip');
+  if(!wrap || !tip) return;
+  wrap.querySelectorAll('.tdot').forEach(dot=>{
+    dot.addEventListener('mouseenter', (e)=>{
+      const rect = wrap.getBoundingClientRect();
+      const dotRect = dot.getBoundingClientRect();
+      const x = dotRect.left - rect.left + dotRect.width/2;
+      const y = dotRect.top - rect.top;
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+      tip.textContent = `Day ${dot.dataset.day}: ${dot.dataset.score}/100`;
+      tip.style.display = 'block';
+    });
+    dot.addEventListener('mouseleave', ()=>{ tip.style.display = 'none'; });
+  });
+}
+
+function renderPanel(){
+  const client = clients.find(c=>c.id===activeId);
+  const panel = document.getElementById('panel');
+
+  const filters = ['all','compliance','escalation','repeat','sentiment'];
+  const filterLabels = {all:'All', compliance:'Compliance risk', escalation:'Escalation', repeat:'Repeat issue', sentiment:'Sentiment dip'};
+
+  let filteredDigest = client.digest.filter(d => activeFilter==='all' || d.tag===activeFilter);
+
+  let digestHtml = '';
+  if(filteredDigest.length === 0){
+    digestHtml = `<div class="empty">${client.digest.length===0 ? 'No flagged items — this rollout is tracking clean so far.' : 'Nothing in this category right now.'}</div>`;
+  } else {
+    digestHtml = filteredDigest.map((d, idx) => `
+      <div class="digest-item">
+        <div class="top">
+          <div>
+            <span class="tag ${d.tag}">${filterLabels[d.tag]}</span>
+            <h3>${d.title}</h3>
+          </div>
+          <span class="count-badge">${d.count}× this window</span>
+        </div>
+        <p>${d.summary}</p>
+        <div class="meta">
+          <span>${d.window}</span>
+        </div>
+        <button class="toggle-btn" data-idx="${client.id}-${idx}">View sample conversation ↓</button>
+        <div class="transcript" id="t-${client.id}-${idx}">
+          ${d.transcript.map(t=>`<div class="${t.flag?'flagline':''}"><span class="who">${t.who}:</span> ${t.line}</div>`).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  panel.innerHTML = `
+    <div class="card">
+      <div class="card-title">
+        <h2>${client.name} — day-by-day health</h2>
+        <span class="sub">Day ${client.day} of 60</span>
+      </div>
+      <p class="section-hint">This score reflects how many conversations that day needed a human, versus how many the AI handled cleanly on its own. Hover a dot for the exact number.</p>
+      <div class="timeline-wrap">${buildTimelineSVG(client.trend)}</div>
+      <div class="timeline-legend">
+        <span><span class="legend-dot" style="background:var(--green)"></span>Healthy (75+)</span>
+        <span><span class="legend-dot" style="background:var(--amber)"></span>Watch (55–74)</span>
+        <span><span class="legend-dot" style="background:var(--red)"></span>Needs action (below 55)</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <h2>Today's digest</h2>
+        <span class="sub">${client.digest.length} flagged item${client.digest.length===1?'':'s'} total</span>
+      </div>
+      <p class="section-hint">These are the actual conversation patterns dragging the score down — grouped by why they were flagged, not just a raw list.</p>
+      <div class="filters">
+        ${filters.map(f=>`<button class="filter-chip ${activeFilter===f?'active':''}" data-filter="${f}">${filterLabels[f]}</button>`).join('')}
+      </div>
+      <div class="digest-list">${digestHtml}</div>
+    </div>
+  `;
+
+  panel.querySelectorAll('.filter-chip').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ activeFilter = btn.dataset.filter; renderAll(); });
+  });
+  panel.querySelectorAll('.toggle-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const t = document.getElementById('t-'+btn.dataset.idx);
+      t.classList.toggle('open');
+      btn.textContent = t.classList.contains('open') ? 'Hide sample conversation ↑' : 'View sample conversation ↓';
+    });
+  });
+  wireChartTooltip();
+}
+
+function renderStats(){
+  document.getElementById('stat-active').textContent = clients.length;
+  document.getElementById('stat-review').textContent = clients.filter(c=>c.status==='review').length;
+  document.getElementById('stat-critical').textContent = clients.filter(c=>c.status==='critical').length;
+}
+
+const guideDismiss = document.getElementById('guideDismiss');
+if(guideDismiss){
+  guideDismiss.addEventListener('click', ()=>{
+    document.getElementById('guide').style.display = 'none';
+  });
+}
+
+function renderAll(){
+  renderQueue();
+  renderPanel();
+  renderStats();
+}
+
+renderAll();
+</script>
+</body>
+</html>
